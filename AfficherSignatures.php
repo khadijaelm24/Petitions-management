@@ -1,9 +1,9 @@
 <?php
-header('Content-Type: text/plain');  // Ensure we're outputting text
+header('Content-Type: text/plain');  
 
 try {
     $bdd = new PDO('mysql:host=localhost:3308;dbname=petition;charset=utf8', 'root', '');
-    $idp = isset($_GET['IDP']) ? $_GET['IDP'] : 0;  // Default to 0 if not provided
+    $idp = isset($_GET['IDP']) ? $_GET['IDP'] : 0; 
 
     $requete = $bdd->prepare("SELECT Nom, Prenom, Date, Heure FROM Signature WHERE IDP = ? ORDER BY IDS DESC LIMIT 5");
     $requete->execute([$idp]);

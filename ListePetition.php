@@ -59,14 +59,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $stmt = $pdo->prepare("INSERT INTO Petition (Titre, Theme, Description, DatePublic, DateFin) VALUES (?, ?, ?, ?, ?)");
     $stmt->execute([$titre, $theme, $description, $datePublic, $dateFin]);
 
-    // Only return JSON data if it's an AJAX request
     if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) == 'xmlhttprequest') {
         $response = [
             'petitionList' => getPetitionsTableHTML($pdo),
             'mostSignedPetition' => getMostSignedPetitionHTML($pdo)
         ];
         echo json_encode($response);
-        exit(); // Stop further script execution
+        exit(); 
     }
 }
 ?>
@@ -77,108 +76,121 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Liste des Pétitions</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
     <style>
-        table, th, td {
-            border: 1px solid black;
-            border-collapse: collapse;
-            padding: 8px;
-            text-align: left;
-        }
-        th {
-            background-color: #f2f2f2;
-        }
-        .modal {
-            display: none;
-            position: fixed;
-            z-index: 1;
-            left: 0;
-            top: 0;
-            width: 100%;
-            height: 100%;
-            overflow: auto;
-            background-color: rgba(0,0,0,0.4);
-        }
         .modal-content {
             background-color: #fefefe;
-            margin: 15% auto;
             padding: 20px;
             border: 1px solid #888;
-            width: 80%;
-        }
-        .close {
-            color: #aaa;
-            float: right;
-            font-size: 28px;
-            font-weight: bold;
         }
         .close:hover,
         .close:focus {
             color: black;
             cursor: pointer;
         }
+        .btn-primary {
+            background-color: blue; 
+            border-color: #9dc8e2;
+        }
+        .btn-primary:hover {
+            background-color: blue; 
+            border-color: #82b2c1;
+        }
     </style>
+</head>
+<body class="bg-light">
+    <div class="container mt-4">
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h4>Liste des Pétitions</h4>
+        <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#myModal">
+            Ajouter Pétition
+        </button>
+    </div>
+
+        <div class="modal fade" id="myModal">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h4 class="modal-title">Ajouter une nouvelle pétition</h4>
+                        <button type="button" class="close" data-dismiss="modal">&times;</button>
+                    </div>
+                    <div class="modal-body">
+                        <form id="addPetitionForm" onsubmit="return submitForm();">
+                            <div class="form-group">
+                                <label for="titre">Titre:</label>
+                                <input type="text" id="titre" name="titre" class="form-control" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="theme">Thème:</label>
+                                <select id="theme" name="theme" class="form-control">
+                                    <option value="Environnement">Environnement</option>
+                                    <option value="Éducation">Éducation</option>
+                                    <option value="Technologie">Technologie</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="description">Description:</label>
+                                <textarea id="description" name="description" class="form-control" required></textarea>
+                            </div>
+                            <div class="form-group">
+                                <label for="datePublic">Date de Publication:</label>
+                                <input type="date" id="datePublic" name="datePublic" class="form-control" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="dateFin">Date de Fin:</label>
+                                <input type="date" id="dateFin" name="dateFin" class="form-control" required>
+                            </div>
+                            <button type="submit" class="btn btn-primary">Ajouter</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <table class="table table-bordered mt-5" id='petitionList'>
+            <?php if (!$_POST) { echo getPetitionsTableHTML($pdo); } ?>
+        </table>
+
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h4 class="mt-5">La Pétition ayant le plus grand nombre de signatures par Thème</h4>            
+        </div>
+
+        <table class="table table-bordered" id='mostSignedPetition'>
+            <?php if (!$_POST) { echo getMostSignedPetitionHTML($pdo); } ?>
+        </table>
+    </div>
+    <!-- Bootstrap JS and dependencies -->
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.2/dist/js/bootstrap.bundle.min.js"></script>
+
     <script>
         function showModal() {
-            document.getElementById('myModal').style.display = "block";
+            $('#myModal').modal('show');
         }
-
         function closeModal() {
-            document.getElementById('myModal').style.display = "none";
+            $('#myModal').modal('hide');
         }
-
         function submitForm() {
             var xhr = new XMLHttpRequest();
             var formData = new FormData(document.getElementById("addPetitionForm"));
-            xhr.open("POST", "ListePetition.php", true);  // Posting to the same URL.
-            xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest'); // Header to identify AJAX request
+            xhr.open("POST", "ListePetition.php", true);
+            xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
             xhr.onload = function () {
                 if (xhr.status === 200) {
                     var response = JSON.parse(xhr.responseText);
                     document.getElementById("petitionList").innerHTML = response.petitionList;
                     document.getElementById("mostSignedPetition").innerHTML = response.mostSignedPetition;
-                    closeModal();
+                    $('#myModal').modal('hide');
                 } else {
                     alert('Error adding petition.');
                 }
             };
             xhr.send(formData);
-            return false; // Prevent traditional form submission
+            return false;
         }
     </script>
-</head>
-<body>
-    <h1>Liste des Pétitions</h1>
-    <button onclick="showModal()" style="float:right;">Ajouter Petition</button>
-    <div id="myModal" class="modal">
-        <div class="modal-content">
-            <span class="close" onclick="closeModal()">&times;</span>
-            <form id="addPetitionForm" onsubmit="return submitForm();">
-                <label for="titre">Titre:</label>
-                <input type="text" id="titre" name="titre" required><br><br>
-                <label for="theme">Thème:</label>
-                <select id="theme" name="theme">
-                    <option value="Environnement">Environnement</option>
-                    <option value="Éducation">Éducation</option>
-                    <option value="Technologie">Technologie</option>
-                </select><br><br>
-                <label for="description">Description:</label>
-                <textarea id="description" name="description" required></textarea><br><br>
-                <label for="datePublic">Date de Publication:</label>
-                <input type="date" id="datePublic" name="datePublic" required><br><br>
-                <label for="dateFin">Date de Fin:</label>
-                <input type="date" id="dateFin" name="dateFin" required><br><br>
-                <input type="submit" value="Ajouter">
-            </form>
-        </div>
-    </div>
-    
-    <table id='petitionList'><?php if (!$_POST) { echo getPetitionsTableHTML($pdo); } ?></table>
-    <br><br>
-    
-    <h1>La Pétition ayant le plus grand nombre de signatures par Thème</h1>
-
-    <table id='mostSignedPetition'><?php if (!$_POST) { echo getMostSignedPetitionHTML($pdo); } ?></table>
-    <br><br>
 
 </body>
 </html>
